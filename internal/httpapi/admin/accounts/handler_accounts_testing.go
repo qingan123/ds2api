@@ -109,10 +109,13 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 		"config_writable": !h.Store.IsEnvBacked(),
 		"config_warning":  "",
 	}
+	var statusReason string
 	defer func() {
 		status := "failed"
 		if ok, _ := result["success"].(bool); ok {
 			status = "ok"
+		} else if statusReason != "" {
+			status = statusReason
 		}
 		_ = h.Store.UpdateAccountTestStatus(identifier, status)
 	}()
@@ -123,10 +126,46 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 	if token != "" {
 		authCtx := &authn.RequestAuth{UseConfigToken: true, DeepSeekToken: token, AccountID: identifier, Account: acc}
 		proxyCtx := authn.WithAuth(ctx, authCtx)
+
+		// 优先检测账号状态与封禁情况
+		userInfo, userErr := h.DS.GetUserInfo(proxyCtx, token)
+		if userErr == nil && userInfo != nil {
+			if userInfo.IsMuted != 0 || strings.Contains(strings.ToLower(userInfo.Status), "ban") || strings.Contains(strings.ToLower(userInfo.Status), "mute") {
+				statusReason = "banned"
+				if userInfo.MuteUntil > 0 {
+					muteTime := time.Unix(userInfo.MuteUntil, 0).Format("2006-01-02 15:04:05")
+					result["message"] = fmt.Sprintf("账号已被官方禁言/封禁至 %s (is_muted=1)", muteTime)
+				} else {
+					result["message"] = "账号已被官方封禁/禁言 (is_muted=1)"
+				}
+				return result
+			}
+		} else if userErr != nil {
+			errStr := userErr.Error()
+			if isBanError(errStr) {
+				statusReason = "banned"
+				result["message"] = "账号已被官方封禁/禁言: " + errStr
+				return result
+			}
+			if strings.Contains(errStr, "40003") || strings.Contains(strings.ToLower(errStr), "invalid token") {
+				statusReason = "invalid"
+			}
+		}
+
 		sessionStats, sessionErr := h.DS.GetSessionCountForToken(proxyCtx, token)
 		if sessionErr == nil && sessionStats != nil {
 			tokenValid = true
 			result["session_count"] = sessionStats.FirstPageCount
+		} else if sessionErr != nil {
+			errStr := sessionErr.Error()
+			if isBanError(errStr) {
+				statusReason = "banned"
+				result["message"] = "账号已被官方封禁/禁言: " + errStr
+				return result
+			}
+			if strings.Contains(errStr, "40003") || strings.Contains(strings.ToLower(errStr), "invalid token") {
+				statusReason = "invalid"
+			}
 		}
 	}
 
@@ -134,13 +173,23 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 		if strings.TrimSpace(acc.Password) == "" {
 			if token == "" {
 				result["message"] = "未配置 Token 且无密码"
+			} else if statusReason == "banned" {
+				// already set
+			} else if statusReason == "invalid" {
+				result["message"] = "当前 Token 已失效(40003)，且未配置密码无法自动刷新"
 			} else {
-				result["message"] = "当前 Token 已失效，且未配置密码无法自动刷新"
+				result["message"] = "当前 Token 校验失败，且未配置密码无法自动刷新"
 			}
 			return result
 		}
 		newToken, loginErr := h.DS.Login(ctx, acc)
 		if loginErr != nil {
+			errStr := loginErr.Error()
+			if isBanError(errStr) {
+				statusReason = "banned"
+				result["message"] = "账号已被官方封禁/禁言: " + errStr
+				return result
+			}
 			if token != "" {
 				result["message"] = "当前 Token 失效且重新登录失败: " + loginErr.Error()
 			} else {
@@ -159,7 +208,13 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 
 	sessionID, err := h.DS.CreateSession(proxyCtx, authCtx, 1)
 	if err != nil {
-		result["message"] = "创建会话失败: " + err.Error()
+		errStr := err.Error()
+		if isBanError(errStr) {
+			statusReason = "banned"
+			result["message"] = "账号已被官方封禁/禁言: " + errStr
+		} else {
+			result["message"] = "创建会话失败: " + err.Error()
+		}
 		return result
 	}
 
@@ -318,4 +373,18 @@ func (h *Handler) deleteAllSessions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "删除成功"})
+}
+
+func isBanError(errStr string) bool {
+	low := strings.ToLower(errStr)
+	return strings.Contains(errStr, "封禁") ||
+		strings.Contains(errStr, "禁言") ||
+		strings.Contains(errStr, "冻结") ||
+		strings.Contains(errStr, "停用") ||
+		strings.Contains(errStr, "异常") ||
+		strings.Contains(low, "ban") ||
+		strings.Contains(low, "mute") ||
+		strings.Contains(low, "suspend") ||
+		strings.Contains(low, "frozen") ||
+		strings.Contains(low, "deactivate")
 }

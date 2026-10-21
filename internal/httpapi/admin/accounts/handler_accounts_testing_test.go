@@ -62,6 +62,10 @@ func (m *testingDSMock) GetSessionCountForToken(_ context.Context, _ string) (*d
 	return &dsclient.SessionStats{Success: true}, nil
 }
 
+func (m *testingDSMock) GetUserInfo(_ context.Context, _ string) (*dsclient.UserInfo, error) {
+	return &dsclient.UserInfo{Status: "normal", IsMuted: 0}, nil
+}
+
 func TestTestAccount_BatchModeOnlyCreatesSession(t *testing.T) {
 	t.Setenv("DS2API_CONFIG_JSON", `{"accounts":[{"email":"batch@example.com","password":"pwd","token":""}]}`)
 	store := config.LoadStore()
@@ -165,6 +169,10 @@ func (m *completionPayloadDSMock) DeleteAllSessionsForToken(_ context.Context, _
 
 func (m *completionPayloadDSMock) GetSessionCountForToken(_ context.Context, _ string) (*dsclient.SessionStats, error) {
 	return &dsclient.SessionStats{Success: true}, nil
+}
+
+func (m *completionPayloadDSMock) GetUserInfo(_ context.Context, _ string) (*dsclient.UserInfo, error) {
+	return &dsclient.UserInfo{Status: "normal", IsMuted: 0}, nil
 }
 
 func TestTestAccount_MessageModeUsesExpertModelTypeForExpertModel(t *testing.T) {

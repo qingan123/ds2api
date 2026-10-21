@@ -127,6 +127,8 @@
         "addAccount": "Add account",
         "testingAllAccounts": "Refreshing tokens for all accounts...",
         "sessionActive": "Session active",
+        "accountBanned": "Account Banned/Muted",
+        "tokenInvalid": "Token Invalid/Expired",
         "reauthRequired": "Retest status required",
         "runtimeStatusUnknown": "Will be determined after sync",
         "testStatusFailed": "Last test failed",

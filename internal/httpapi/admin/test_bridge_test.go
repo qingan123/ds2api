@@ -82,6 +82,10 @@ func (m *testingDSMock) GetSessionCountForToken(_ context.Context, _ string) (*d
 	return &dsclient.SessionStats{}, nil
 }
 
+func (m *testingDSMock) GetUserInfo(_ context.Context, _ string) (*dsclient.UserInfo, error) {
+	return &dsclient.UserInfo{Status: "normal", IsMuted: 0}, nil
+}
+
 func (h *Handler) configHandler() *adminconfig.Handler {
 	return &adminconfig.Handler{Store: h.Store, Pool: h.Pool, DS: h.DS, OpenAI: h.OpenAI, ChatHistory: h.ChatHistory}
 }

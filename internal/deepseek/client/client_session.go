@@ -106,6 +106,54 @@ func (c *Client) GetSessionCount(ctx context.Context, a *auth.RequestAuth, maxAt
 	return stats, errors.New(stats.ErrorMessage)
 }
 
+type UserInfo struct {
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Mobile    string `json:"mobile"`
+	Status    string `json:"status"`
+	IsMuted   int    `json:"is_muted"`
+	MuteUntil int64  `json:"mute_until"`
+}
+
+// GetUserInfo 直接使用 token 获取当前用户信息及封禁状态
+func (c *Client) GetUserInfo(ctx context.Context, token string) (*UserInfo, error) {
+	clients := c.requestClientsFromContext(ctx)
+	headers := c.authHeaders(token)
+	resp, status, err := c.getJSONWithStatus(ctx, clients.regular, "https://chat.deepseek.com/api/v0/users/current", headers)
+	if err != nil {
+		return nil, err
+	}
+	code, bizCode, msg, bizMsg := extractResponseStatus(resp)
+	if status != http.StatusOK || code != 0 || bizCode != 0 {
+		if strings.TrimSpace(bizMsg) != "" {
+			msg = bizMsg
+		}
+		return nil, fmt.Errorf("status=%d, code=%d, msg=%s", status, code, msg)
+	}
+	data, _ := resp["data"].(map[string]any)
+	bizData, _ := data["biz_data"].(map[string]any)
+	chat, _ := bizData["chat"].(map[string]any)
+	isMuted := intFrom(bizData["is_muted"])
+	if isMuted == 0 && chat != nil {
+		isMuted = intFrom(chat["is_muted"])
+	}
+	muteUntil := int64(intFrom(bizData["mute_until"]))
+	if muteUntil == 0 && chat != nil {
+		muteUntil = int64(intFrom(chat["mute_until"]))
+	}
+	info := &UserInfo{
+		Email:     fmt.Sprintf("%v", bizData["email"]),
+		Mobile:    fmt.Sprintf("%v", bizData["mobile_number"]),
+		Status:    fmt.Sprintf("%v", bizData["status"]),
+		IsMuted:   isMuted,
+		MuteUntil: muteUntil,
+	}
+	if idProfile, ok := bizData["id_profile"].(map[string]any); ok {
+		info.Name = fmt.Sprintf("%v", idProfile["name"])
+	}
+	return info, nil
+}
+
 // GetSessionCountForToken 直接使用 token 获取会话数量（直通模式）
 func (c *Client) GetSessionCountForToken(ctx context.Context, token string) (*SessionStats, error) {
 	clients := c.requestClientsFromContext(ctx)

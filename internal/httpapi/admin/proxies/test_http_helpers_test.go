@@ -35,6 +35,9 @@ func (m *testingDSMock) DeleteAllSessionsForToken(_ context.Context, _ string) e
 func (m *testingDSMock) GetSessionCountForToken(_ context.Context, _ string) (*dsclient.SessionStats, error) {
 	return &dsclient.SessionStats{}, nil
 }
+func (m *testingDSMock) GetUserInfo(_ context.Context, _ string) (*dsclient.UserInfo, error) {
+	return &dsclient.UserInfo{Status: "normal", IsMuted: 0}, nil
+}
 
 func newHTTPAdminHarness(t *testing.T, rawConfig string, ds adminshared.DeepSeekCaller) http.Handler {
 	t.Helper()
