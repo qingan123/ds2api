@@ -116,48 +116,70 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 		}
 		_ = h.Store.UpdateAccountTestStatus(identifier, status)
 	}()
-	token, err := h.DS.Login(ctx, acc)
-	if err != nil {
-		result["message"] = "登录失败: " + err.Error()
-		return result
+	token := strings.TrimSpace(acc.Token)
+	var err error
+	tokenValid := false
+
+	if token != "" {
+		authCtx := &authn.RequestAuth{UseConfigToken: true, DeepSeekToken: token, AccountID: identifier, Account: acc}
+		proxyCtx := authn.WithAuth(ctx, authCtx)
+		sessionStats, sessionErr := h.DS.GetSessionCountForToken(proxyCtx, token)
+		if sessionErr == nil && sessionStats != nil {
+			tokenValid = true
+			result["session_count"] = sessionStats.FirstPageCount
+		}
 	}
-	if err := h.Store.UpdateAccountToken(acc.Identifier(), token); err != nil {
-		result["config_warning"] = "登录成功，但 token 持久化失败（仅保存在内存，重启后会丢失）: " + err.Error()
-	}
-	authCtx := &authn.RequestAuth{UseConfigToken: false, DeepSeekToken: token, AccountID: identifier, Account: acc}
-	proxyCtx := authn.WithAuth(ctx, authCtx)
-	sessionID, err := h.DS.CreateSession(proxyCtx, authCtx, 1)
-	if err != nil {
-		newToken, loginErr := h.DS.Login(proxyCtx, acc)
+
+	if !tokenValid {
+		if strings.TrimSpace(acc.Password) == "" {
+			if token == "" {
+				result["message"] = "未配置 Token 且无密码"
+			} else {
+				result["message"] = "当前 Token 已失效，且未配置密码无法自动刷新"
+			}
+			return result
+		}
+		newToken, loginErr := h.DS.Login(ctx, acc)
 		if loginErr != nil {
-			result["message"] = "创建会话失败: " + err.Error()
+			if token != "" {
+				result["message"] = "当前 Token 失效且重新登录失败: " + loginErr.Error()
+			} else {
+				result["message"] = "登录失败: " + loginErr.Error()
+			}
 			return result
 		}
 		token = newToken
-		authCtx.DeepSeekToken = token
 		if err := h.Store.UpdateAccountToken(acc.Identifier(), token); err != nil {
-			result["config_warning"] = "刷新 token 成功，但 token 持久化失败（仅保存在内存，重启后会丢失）: " + err.Error()
-		}
-		sessionID, err = h.DS.CreateSession(proxyCtx, authCtx, 1)
-		if err != nil {
-			result["message"] = "创建会话失败: " + err.Error()
-			return result
+			result["config_warning"] = "登录成功，但 token 持久化失败（仅保存在内存，重启后会丢失）: " + err.Error()
 		}
 	}
 
-	// 获取会话数量
-	sessionStats, sessionErr := h.DS.GetSessionCountForToken(proxyCtx, token)
-	if sessionErr == nil && sessionStats != nil {
-		result["session_count"] = sessionStats.FirstPageCount
-	}
+	authCtx := &authn.RequestAuth{UseConfigToken: true, DeepSeekToken: token, AccountID: identifier, Account: acc}
+	proxyCtx := authn.WithAuth(ctx, authCtx)
 
 	if strings.TrimSpace(message) == "" {
+		if _, ok := result["session_count"].(int); !ok || result["session_count"].(int) == 0 {
+			sessionStats, sessionErr := h.DS.GetSessionCountForToken(proxyCtx, token)
+			if sessionErr == nil && sessionStats != nil {
+				result["session_count"] = sessionStats.FirstPageCount
+			}
+		}
 		result["success"] = true
-		result["message"] = "Token 刷新成功（登录与会话创建成功）"
+		if tokenValid {
+			result["message"] = "Token 校验成功，账号可用"
+		} else {
+			result["message"] = "登录成功，Token 已刷新"
+		}
 		if warning, _ := result["config_warning"].(string); strings.TrimSpace(warning) != "" {
 			result["message"] = result["message"].(string) + "；" + warning
 		}
 		result["response_time"] = int(time.Since(start).Milliseconds())
+		return result
+	}
+
+	sessionID, err := h.DS.CreateSession(proxyCtx, authCtx, 1)
+	if err != nil {
+		result["message"] = "创建会话失败: " + err.Error()
 		return result
 	}
 	thinking, search, ok := config.GetModelConfig(model)

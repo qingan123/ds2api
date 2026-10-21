@@ -8,8 +8,8 @@ export function useAccountActions({ apiFetch, t, onMessage, onRefresh, config, f
     const [editingAccount, setEditingAccount] = useState(null)
     const [newKey, setNewKey] = useState({ key: '', name: '', remark: '' })
     const [copiedKey, setCopiedKey] = useState(null)
-    const [newAccount, setNewAccount] = useState({ name: '', remark: '', email: '', mobile: '', password: '' })
-    const [editAccount, setEditAccount] = useState({ name: '', remark: '' })
+    const [newAccount, setNewAccount] = useState({ name: '', remark: '', email: '', mobile: '', password: '', token: '' })
+    const [editAccount, setEditAccount] = useState({ name: '', remark: '', token: '' })
     const [loading, setLoading] = useState(false)
     const [testing, setTesting] = useState({})
     const [testingAll, setTestingAll] = useState(false)
@@ -44,14 +44,14 @@ export function useAccountActions({ apiFetch, t, onMessage, onRefresh, config, f
     const openAddAccount = () => {
         setShowEditAccount(false)
         setEditingAccount(null)
-        setEditAccount({ name: '', remark: '' })
-        setNewAccount({ name: '', remark: '', email: '', mobile: '', password: '' })
+        setEditAccount({ name: '', remark: '', token: '' })
+        setNewAccount({ name: '', remark: '', email: '', mobile: '', password: '', token: '' })
         setShowAddAccount(true)
     }
 
     const closeAddAccount = () => {
         setShowAddAccount(false)
-        setNewAccount({ name: '', remark: '', email: '', mobile: '', password: '' })
+        setNewAccount({ name: '', remark: '', email: '', mobile: '', password: '', token: '' })
     }
 
     const openEditAccount = (account) => {
@@ -67,6 +67,7 @@ export function useAccountActions({ apiFetch, t, onMessage, onRefresh, config, f
         setEditAccount({
             name: account?.name || '',
             remark: account?.remark || '',
+            token: '',
         })
         setShowEditAccount(true)
     }
@@ -74,7 +75,7 @@ export function useAccountActions({ apiFetch, t, onMessage, onRefresh, config, f
     const closeEditAccount = () => {
         setShowEditAccount(false)
         setEditingAccount(null)
-        setEditAccount({ name: '', remark: '' })
+        setEditAccount({ name: '', remark: '', token: '' })
     }
 
     const addKey = async () => {
@@ -130,8 +131,12 @@ export function useAccountActions({ apiFetch, t, onMessage, onRefresh, config, f
     }
 
     const addAccount = async () => {
-        if (!newAccount.password || (!newAccount.email && !newAccount.mobile)) {
-            onMessage('error', t('accountManager.requiredFields'))
+        if (!newAccount.token && !newAccount.password) {
+            onMessage('error', '需要填写 Token 或 密码')
+            return
+        }
+        if (!newAccount.email && !newAccount.mobile) {
+            onMessage('error', '需要填写 邮箱 或 手机号 作为账号标识')
             return
         }
         setLoading(true)

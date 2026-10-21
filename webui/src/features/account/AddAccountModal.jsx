@@ -64,7 +64,17 @@ export default function AddAccountModal({
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1.5">{t('accountManager.passwordLabel')} <span className="text-destructive">*</span></label>
+                        <label className="block text-sm font-medium mb-1.5">{t('accountManager.tokenOptional') || 'Token（推荐，免密直连）'}</label>
+                        <input
+                            type="text"
+                            className="input-field"
+                            placeholder="rwHj7k...（从浏览器 F12 userToken 复制）"
+                            value={newAccount.token || ''}
+                            onChange={e => setNewAccount({ ...newAccount, token: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1.5">{t('accountManager.passwordLabel')} <span className="text-muted-foreground text-xs font-normal">（已填 Token 可留空）</span></label>
                         <input
                             type="password"
                             className="input-field bg-[#09090b]"

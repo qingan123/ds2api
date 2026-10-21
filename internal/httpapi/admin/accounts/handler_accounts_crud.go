@@ -121,6 +121,8 @@ func (h *Handler) updateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 	name, nameOK := fieldStringOptional(req, "name")
 	remark, remarkOK := fieldStringOptional(req, "remark")
+	token, tokenOK := fieldStringOptional(req, "token")
+	password, passwordOK := fieldStringOptional(req, "password")
 
 	err := h.Store.Update(func(c *config.Config) error {
 		for i, acc := range c.Accounts {
@@ -132,6 +134,12 @@ func (h *Handler) updateAccount(w http.ResponseWriter, r *http.Request) {
 			}
 			if remarkOK {
 				c.Accounts[i].Remark = remark
+			}
+			if tokenOK && strings.TrimSpace(token) != "" {
+				c.Accounts[i].Token = strings.TrimSpace(token)
+			}
+			if passwordOK && strings.TrimSpace(password) != "" {
+				c.Accounts[i].Password = strings.TrimSpace(password)
 			}
 			return nil
 		}
