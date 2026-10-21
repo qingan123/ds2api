@@ -162,6 +162,14 @@ func (c *Client) GetSessionCountAll(ctx context.Context) []*SessionStats {
 
 		// 如果没有 token，尝试登录获取
 		if token == "" {
+			if strings.TrimSpace(acc.Password) == "" {
+				results = append(results, &SessionStats{
+					AccountID:    accountID,
+					Success:      false,
+					ErrorMessage: "no token and no password",
+				})
+				continue
+			}
 			var err error
 			token, err = c.Login(auth.WithAuth(ctx, &auth.RequestAuth{AccountID: acc.Identifier(), Account: acc}), acc)
 			if err != nil {

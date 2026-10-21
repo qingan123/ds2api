@@ -269,9 +269,13 @@ func callerTokenID(token string) string {
 
 func (r *Resolver) ensureManagedToken(ctx context.Context, a *RequestAuth) error {
 	if strings.TrimSpace(a.Account.Token) == "" {
+		if strings.TrimSpace(a.Account.Password) == "" {
+			return errors.New("account has no token and no password configured")
+		}
 		return r.loginAndPersist(ctx, a)
 	}
-	if r.shouldForceRefresh(a.AccountID) {
+	// ponytail: static token without password should never attempt password refresh
+	if strings.TrimSpace(a.Account.Password) != "" && r.shouldForceRefresh(a.AccountID) {
 		if err := r.loginAndPersist(ctx, a); err != nil {
 			return err
 		}
