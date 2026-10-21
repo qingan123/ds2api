@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -29,6 +30,23 @@ func TestLoadStoreClearsTokensFromConfigInput(t *testing.T) {
 	}
 	if accounts[0].Token != "" {
 		t.Fatalf("expected token to be cleared after loading, got %q", accounts[0].Token)
+	}
+}
+
+func TestSavePreservesPasswordlessTokenOnDisk(t *testing.T) {
+	tmpFile := filepath.Join(t.TempDir(), "config.json")
+	_ = os.WriteFile(tmpFile, []byte(`{"accounts":[{"email":"test@example.com","token":"my-secret-token"}]}`), 0644)
+	t.Setenv("DS2API_CONFIG_PATH", tmpFile)
+	store := LoadStore()
+	if err := store.Save(); err != nil {
+		t.Fatalf("save failed: %v", err)
+	}
+	content, err := os.ReadFile(tmpFile)
+	if err != nil {
+		t.Fatalf("read failed: %v", err)
+	}
+	if !strings.Contains(string(content), "my-secret-token") {
+		t.Fatalf("expected token preserved on disk after Save(), got %s", string(content))
 	}
 }
 
