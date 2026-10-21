@@ -164,6 +164,10 @@ func (r *Resolver) RefreshToken(ctx context.Context, a *RequestAuth) bool {
 	if !a.UseConfigToken || a.AccountID == "" {
 		return false
 	}
+	// ponytail: never wipe valid static token when password is empty
+	if strings.TrimSpace(a.Account.Password) == "" {
+		return false
+	}
 	_ = r.Store.UpdateAccountToken(a.AccountID, "")
 	a.Account.Token = ""
 	if err := r.loginAndPersist(ctx, a); err != nil {
@@ -175,6 +179,10 @@ func (r *Resolver) RefreshToken(ctx context.Context, a *RequestAuth) bool {
 
 func (r *Resolver) MarkTokenInvalid(a *RequestAuth) {
 	if !a.UseConfigToken || a.AccountID == "" {
+		return
+	}
+	// ponytail: don't clear config token from disk if account has no password to recover
+	if strings.TrimSpace(a.Account.Password) == "" {
 		return
 	}
 	a.Account.Token = ""
