@@ -33,6 +33,9 @@ var deepSeekBaseModels = []ModelInfo{
 	{ID: "deepseek-v4.1", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
 	{ID: "deepseek-v4.1-flash", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
 	{ID: "deepseek-v4.1-pro", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
+	{ID: "deepseek-v4.1-flash-search", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
+	{ID: "deepseek-v4.1-pro-search", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
+	{ID: "deepseek-v4.1-vision", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
 	{ID: "deepseek-v4-flash", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
 	{ID: "deepseek-v4-pro", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
 	{ID: "deepseek-v4-flash-search", Object: "model", Created: 1677610602, OwnedBy: "deepseek", Permission: []any{}},
@@ -44,11 +47,19 @@ var OllamaCapabilitiesModels = []OllamaCapabilitiesModelInfo{
 	{ID: "deepseek-v4.1", Capabilities: []string{"tools", "thinking"}},
 	{ID: "deepseek-v4.1-flash", Capabilities: []string{"tools", "thinking"}},
 	{ID: "deepseek-v4.1-pro", Capabilities: []string{"tools", "thinking"}},
+	{ID: "deepseek-v4.1-flash-search", Capabilities: []string{"tools", "thinking"}},
+	{ID: "deepseek-v4.1-pro-search", Capabilities: []string{"tools", "thinking"}},
+	{ID: "deepseek-v4.1-vision", Capabilities: []string{"tools", "thinking", "vision"}},
 	{ID: "deepseek-v4-flash", Capabilities: []string{"tools", "thinking"}},
 	{ID: "deepseek-v4-pro", Capabilities: []string{"tools", "thinking"}},
 	{ID: "deepseek-v4-flash-search", Capabilities: []string{"tools", "thinking"}},
 	{ID: "deepseek-v4-pro-search", Capabilities: []string{"tools", "thinking"}},
 	{ID: "deepseek-v4-vision", Capabilities: []string{"tools", "thinking", "vision"}},
+	{ID: "deepseek-v4.1-flash-nothinking", Capabilities: []string{"tools"}},
+	{ID: "deepseek-v4.1-pro-nothinking", Capabilities: []string{"tools"}},
+	{ID: "deepseek-v4.1-flash-search-nothinking", Capabilities: []string{"tools"}},
+	{ID: "deepseek-v4.1-pro-search-nothinking", Capabilities: []string{"tools"}},
+	{ID: "deepseek-v4.1-vision-nothinking", Capabilities: []string{"tools", "vision"}},
 	{ID: "deepseek-v4-flash-nothinking", Capabilities: []string{"tools"}},
 	{ID: "deepseek-v4-pro-nothinking", Capabilities: []string{"tools"}},
 	{ID: "deepseek-v4-flash-search-nothinking", Capabilities: []string{"tools"}},
@@ -96,9 +107,9 @@ func GetModelConfig(model string) (thinking bool, search bool, ok bool) {
 		return false, false, false
 	}
 	switch baseModel {
-	case "deepseek-v4.1", "deepseek-v4.1-flash", "deepseek-v4.1-pro", "deepseek-v4-flash", "deepseek-v4-pro", "deepseek-v4-vision":
+	case "deepseek-v4.1", "deepseek-v4.1-flash", "deepseek-v4.1-pro", "deepseek-v4.1-vision", "deepseek-v4-flash", "deepseek-v4-pro", "deepseek-v4-vision":
 		return !noThinking, false, true
-	case "deepseek-v4-flash-search", "deepseek-v4-pro-search":
+	case "deepseek-v4.1-flash-search", "deepseek-v4.1-pro-search", "deepseek-v4-flash-search", "deepseek-v4-pro-search":
 		return !noThinking, true, true
 	default:
 		return false, false, false
@@ -108,11 +119,11 @@ func GetModelConfig(model string) (thinking bool, search bool, ok bool) {
 func GetModelType(model string) (modelType string, ok bool) {
 	baseModel, _ := splitNoThinkingModel(model)
 	switch baseModel {
-	case "deepseek-v4.1", "deepseek-v4.1-flash", "deepseek-v4-flash", "deepseek-v4-flash-search":
+	case "deepseek-v4.1", "deepseek-v4.1-flash", "deepseek-v4.1-flash-search", "deepseek-v4-flash", "deepseek-v4-flash-search":
 		return "default", true
-	case "deepseek-v4.1-pro", "deepseek-v4-pro", "deepseek-v4-pro-search":
+	case "deepseek-v4.1-pro", "deepseek-v4.1-pro-search", "deepseek-v4-pro", "deepseek-v4-pro-search":
 		return "expert", true
-	case "deepseek-v4-vision":
+	case "deepseek-v4.1-vision", "deepseek-v4-vision":
 		return "vision", true
 	default:
 		return "", false
