@@ -78,6 +78,9 @@ func (h *Handler) addAccount(w http.ResponseWriter, r *http.Request) {
 	var req map[string]any
 	_ = json.NewDecoder(r.Body).Decode(&req)
 	acc := toAccount(req)
+	if token, ok := fieldStringOptional(req, "token"); ok && strings.TrimSpace(token) != "" {
+		acc.Token = strings.TrimSpace(token)
+	}
 	if acc.Identifier() == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"detail": "需要 email 或 mobile"})
 		return
