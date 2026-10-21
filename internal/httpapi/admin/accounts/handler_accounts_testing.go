@@ -157,6 +157,12 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 	authCtx := &authn.RequestAuth{UseConfigToken: true, DeepSeekToken: token, AccountID: identifier, Account: acc}
 	proxyCtx := authn.WithAuth(ctx, authCtx)
 
+	sessionID, err := h.DS.CreateSession(proxyCtx, authCtx, 1)
+	if err != nil {
+		result["message"] = "创建会话失败: " + err.Error()
+		return result
+	}
+
 	if strings.TrimSpace(message) == "" {
 		if _, ok := result["session_count"].(int); !ok || result["session_count"].(int) == 0 {
 			sessionStats, sessionErr := h.DS.GetSessionCountForToken(proxyCtx, token)
@@ -168,18 +174,12 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 		if tokenValid {
 			result["message"] = "Token 校验成功，账号可用"
 		} else {
-			result["message"] = "登录成功，Token 已刷新"
+			result["message"] = "Token 刷新成功（登录与会话创建成功）"
 		}
 		if warning, _ := result["config_warning"].(string); strings.TrimSpace(warning) != "" {
 			result["message"] = result["message"].(string) + "；" + warning
 		}
 		result["response_time"] = int(time.Since(start).Milliseconds())
-		return result
-	}
-
-	sessionID, err := h.DS.CreateSession(proxyCtx, authCtx, 1)
-	if err != nil {
-		result["message"] = "创建会话失败: " + err.Error()
 		return result
 	}
 	thinking, search, ok := config.GetModelConfig(model)

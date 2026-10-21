@@ -32,6 +32,22 @@ func TestLoadStoreClearsTokensFromConfigInput(t *testing.T) {
 	}
 }
 
+func TestClearAccountTokensPreservesPasswordlessToken(t *testing.T) {
+	cfg := &Config{
+		Accounts: []Account{
+			{Email: "token-only@example.com", Token: "keep-this-token"},
+			{Email: "with-pwd@example.com", Password: "secret", Token: "drop-this-token"},
+		},
+	}
+	cfg.ClearAccountTokens()
+	if cfg.Accounts[0].Token != "keep-this-token" {
+		t.Fatalf("expected passwordless token to be preserved, got %q", cfg.Accounts[0].Token)
+	}
+	if cfg.Accounts[1].Token != "" {
+		t.Fatalf("expected password account token to be cleared, got %q", cfg.Accounts[1].Token)
+	}
+}
+
 func TestLoadStorePreservesProxiesAndAccountProxyAssignment(t *testing.T) {
 	t.Setenv("DS2API_CONFIG_JSON", `{
 		"proxies":[

@@ -78,7 +78,10 @@ func (c *Config) ClearAccountTokens() {
 		return
 	}
 	for i := range c.Accounts {
-		c.Accounts[i].Token = ""
+		// ponytail: preserve token if account has no password (static token auth)
+		if c.Accounts[i].Password != "" {
+			c.Accounts[i].Token = ""
+		}
 	}
 }
 

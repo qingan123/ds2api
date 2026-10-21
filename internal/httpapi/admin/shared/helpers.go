@@ -167,7 +167,6 @@ func toAccount(m map[string]any) config.Account {
 		Email:    email,
 		Mobile:   mobile,
 		Password: fieldString(m, "password"),
-		Token:    strings.TrimSpace(fieldString(m, "token")),
 		ProxyID:  fieldString(m, "proxy_id"),
 	}
 }
